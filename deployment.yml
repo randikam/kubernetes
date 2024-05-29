@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: billing
+  name: billing
+  namespace: blue-prd
+spec:
+  minReadySeconds: 5
+  replicas: 2
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: billing
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: billing
+    spec:
+      containers:
+        - env:
+            - name: ABR_GUID
+              value: bb0d8d77-eaf3-4136-a19f-a92d45f8259d
+            - name: ABR_URL
+              value: https://abr.business.gov.au/abrxmlsearch/ABRXMLSearch.asmx/
+            - name: PLAY_HOSTNAME
+              value: https://core-blue.us2.io
+            - name: PORTAL_HOSTNAME
+              value: https://bluenrgmyaccount.com.au
+            - name: DB_URL
+              value: jdbc:mysql://blue-rds.us2.uss:3306/Turkey_BLU?characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&noAccessToProcedureBodies=true
+            - name: DB_NAME
+              value: Turkey_BLU
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  key: billing-db-username
+                  name: rds
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: billing-db-password
+                  name: rds
+            - name: BILLING_APPLICATION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: play-secret
+                  name: default
+            - name: BILLING_APPLICATION_SHAREDKEY
+              valueFrom:
+                secretKeyRef:
+                  key: uss-secret
+                  name: default
+            - name: USS_BRAND
+              value: bluenrg
+            - name: EMAIL_SERVICE
+              value: http://not-found/
+            - name: INTERACTION_SERVICE
+              value: http://interaction:9000
+            - name: USS_BUCKET
+              value: k8s-rw-bluenrg
+            - name: BRAND
+              value: bluenrg
+            - name: DOCUMENT_UPDATE_CONTENT_TYPE
+              value: "true"
+            - name: PROXY_HOST
+              value: ingress.bluenrg-prd.svc
+            - name: METER_DATA_SERVICE
+              value: http://meterdata:9000
+            - name: AUDIT_DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: billing-db-password
+                  name: rds
+            - name: AUDIT_DB_URL
+              value: jdbc:mysql://prd-audit.us2.uss:3306/Turkey_Blu_Audit?characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull&noAccessToProcedureBodies=true
+            - name: AUDIT_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  key: billing-db-username
+                  name: rds
+            - name: S3_BUCKET_PUBLIC
+              value: k8s-rw-uss-public-images
+            - name: CDN_S3_RULE_PREFIX
+              value: bluenrg
+            - name: PAYWAY_JS_API_URL
+              value: https://api.payway.com.au/rest/v1/payway.js
+            - name: PAYWAY_REST_API_URL
+              value: https://api.payway.com.au/rest/v1
+            - name: PAYWAY_BANK_ACCOUNT_ID
+              valueFrom:
+                secretKeyRef:
+                  key: payway-bank-account-id
+                  name: payway
+            - name: PAYWAY_MERCHANT_ID
+              valueFrom:
+                secretKeyRef:
+                  key: payway-merchant-id
+                  name: payway
+            - name: PAYWAY_REST_API
+              valueFrom:
+                secretKeyRef:
+                  key: payway-rest-api
+                  name: payway
+            - name: PAYWAY_REST_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: payway-rest-api-secret
+                  name: payway
+            - name: QUICKSTREAM_JS_API_URL
+              value: https://api.quickstream.westpac.com.au/rest/v1/quickstream-api-1.0.min.js
+            - name: QUICKSTREAM_REST_API
+              valueFrom:
+                secretKeyRef:
+                  key: api
+                  name: westpac-production
+            - name: QUICKSTREAM_REST_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: secret
+                  name: westpac-production
+            - name: QUICKSTREAM_REST_API_URL
+              value: https://api.quickstream.westpac.com.au/rest/v1
+            - name: QUICKSTREAM_SUPPLIER_BUSINESS_CODE
+              value: BLUNRG
+            - name: MSATS_WS_ADDR
+              value: msats.prod.nemnet.net.au
+            - name: MSATS_PARTICIPANT
+              value: BLUENRG
+            - name: MSATS_USERNAME
+              value: USSQUOTES
+            - name: MSATS_PASSWORD
+              value: UxQxEQ3sz*3o
+            - name: MSATS_USE_PROXY
+              value: "true"
+            - name: MSATS_PROXY_SERVER
+              value: proxy.callisto.us2.uss
+            - name: MSATS_PROXY_PORT
+              value: "3128"
+            - name: USS_IS_PRODUCTION
+              value: "true"
+          image: {image_tag_placeholder}
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: 9000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: billing
+          ports:
+            - containerPort: 9000
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 9000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 3
+            timeoutSeconds: 15
+          resources:
+            requests:
+              memory: 1500Mi
+              cpu: 200m
+            limits:
+              memory: 1500Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: gitlab-cloud-registry
+        - name: registry
+      nodeSelector:
+        node.kubernetes.io/lifecycle: normal
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
